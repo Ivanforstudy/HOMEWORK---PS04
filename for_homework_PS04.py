@@ -1,68 +1,82 @@
-from selenium import webdriver
 
-import wikipediaapi
+from selenium import webdriver
+import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver import Keys
+
+
+def list_paragraphs(browser):
+    """Функция для листания параграфов статьи."""
+    paragraphs = browser.find_elements(By.TAG_NAME, "p")
+    for paragraph in paragraphs:
+        print(paragraph.text)
+        input("Нажмите Enter, чтобы продолжить к следующему параграфу...")
+
+
+def search_article(browser, query):
+    """Функция для поиска статьи по запросу."""
+    search_box = browser.find_element(By.ID, "searchInput")
+    search_box.clear()  # Очищаем поле поиска
+    search_box.send_keys(query)
+    search_box.send_keys(Keys.RETURN)
+    time.sleep(2)  # Даем время загрузиться странице
+
+
+def navigate_related_article(browser):
+    """Функция для перехода на связанную статью."""
+    related_links = browser.find_elements(By.XPATH, "//div[@class='hatnote navigation-not-searchable']//a")
+
+    if not related_links:
+        print("Нет связанных статей.")
+        return None
+
+    print("Связанные статьи:")
+    for index, link in enumerate(related_links):
+        print(f"{index + 1}. {link.text}")
+
+    choice = int(input("Выберите номер статьи для перехода (или 0 для выхода): "))
+    if choice == 0:
+        return None
+    elif 1 <= choice <= len(related_links):
+        related_links[choice - 1].click()
+        time.sleep(2)  # Даем время загрузиться странице
+        return browser
+    else:
+        print("Неверный выбор.")
+        return None
+
 
 def main():
-    # Указываем пользовательский агент
-    user_agent = "MyWikipediaApp/1.0 (https://example.com; myemail@example.com)"
-    wiki_wiki = wikipediaapi.Wikipedia('ru', user_agent=user_agent)  # Используем русскую Википедию
+    browser = webdriver.Chrome()
+    try:
+        initial_query = input("Введите ваш запрос для поиска в Википедии: ")
+        browser.get("https://ru.wikipedia.org")
+        time.sleep(2)
 
-    while True:
-        # 1. Спрашиваем у пользователя первоначальный запрос
-        query = input("Введите запрос для поиска на Википедии (или 'выход' для завершения): ")
-        if query.lower() == 'выход':
-            break
+        # Ищем статью
+        search_article(browser, initial_query)
 
-        # 2. Переход по первоначальному запросу в Википедии
-        page = wiki_wiki.page(query)
-
-        if not page.exists():
-            print("Страница не найдена. Попробуйте другой запрос.")
-            continue
-
-        # 3. Предлагаем пользователю три варианта действий
         while True:
-            print("\nСтатья:", page.title)
-            print(page.text[:1000])  # Выводим первые 1000 символов статьи
             print("\nВыберите действие:")
-            print("1. Листать параграфы текущей статьи")
-            print("2. Перейти на одну из связанных страниц")
+            print("1. Листать параграфы статьи")
+            print("2. Перейти на связанную статью")
             print("3. Выйти из программы")
 
             choice = input("Ваш выбор: ")
+            if choice == "1":
+                list_paragraphs(browser)
+            elif choice == "2":
+              if navigate_related_article(browser) is None:
 
-            if choice == '1':
-                # Листаем параграфы
-                print("\nСодержимое статьи:")
-                for section in page.sections:
-                    print(section.title)
-                    print(section.text)
-                break  # Возвращаемся к основному меню после просмотра
-
-            elif choice == '2':
-                # Перейти на одну из связанных страниц
-                print("\nСвязанные статьи:")
-                related_pages = page.links
-                for idx, related_page in enumerate(related_pages.keys()):
-                    print(f"{idx + 1}. {related_page}")
-
-                related_choice = input("Введите номер статьи для перехода (или 'назад' для возврата): ")
-                if related_choice.isdigit() and 1 <= int(related_choice) <= len(related_pages):
-                    page = related_pages[list(related_pages.keys())[int(related_choice) - 1]]
-                elif related_choice.lower() == 'назад':
-                    break
-                else:
-                    print("Неверный ввод. Попробуйте снова.")
-
-            elif choice == '3':
-                print("Выход из программы.")
-                return  # Завершаем программу
-
-            else:
-                print("Неверный выбор. Пожалуйста, выберите 1, 2 или 3.")
+                break
+            elif choice == "3":
+              print("Выход из программы.")
+              break
+        else:
+            print("Неверный выбор. Пожалуйста, выберите еще раз.")
+    finally:
+      browser.quit()
 
 if __name__ == "__main__":
     main()
-
-
 
